@@ -12,6 +12,12 @@ Modules:
 - Keep the units of code for a porject both cleanly sperated and organized.
 - Encapsulate some data into privacy and expose other data publicly.
 We'll use a controller module, UI module, data module. We create modules because we want to keep parts of the code that are related to each other together in independent sections. Modules should be written so they are private, using iify, generally, and then return an object that has all of the functions that we want to be public, the outside scope. Each module should be able to run independatly of the others, so you can come back to them later and make edits without worrying too much.
+
+Part II:
+Add event handler to delete buttons
+Delete from data structure and UI
+Recalculate budget after delete
+Update UI after delete
 */
 
 // Budget Controller
@@ -77,6 +83,23 @@ var budgetController = (function() {
             return newItem;
         },
 
+        deleteItem: function(type, id) {
+            var ids, index;
+
+            // Iterate through data.allItems[type] using map function (like forEach, but creates a copy) and return the id of each current, which will be an object, thereby creating an array of ids only
+            ids = data.allItems[type].map(function(current) {
+                return current.id;
+            });
+
+            // Get index of relevant id
+            index = ids.indexOf(id);
+
+            // Run only if indexOf finds relevant id
+            if (index !== -1) {
+                data.allItems[type].splice(index, 1); // index, number to delete
+            }
+        },
+
         calculateBudget: function() {
 
             // Calculate total income and expenses
@@ -86,7 +109,7 @@ var budgetController = (function() {
             // Calculate the budget: income - expenses
             data.budget = data.totals.income - data.totals.expense;
 
-                        // Calculate the percentage of income that was spent
+            // Calculate the percentage of income that was spent
             if (data.totals.income > 0) {
                 data.percentage = Math.round((data.totals.expense / data.totals.income) * 100);
             } else {
@@ -125,7 +148,8 @@ var UIController = (function() {
         budgetLabel: '.budget__value',
         incomeLabel: '.budget__income--value',
         expenseLabel: '.budget__expenses--value',
-        percentageLabel: '.budget__expenses--percentage'
+        percentageLabel: '.budget__expenses--percentage',
+        container: '.container'
     };
 
     return {
@@ -155,6 +179,11 @@ var UIController = (function() {
 
             // Insert the HTML into the DOM
             document.querySelector(element).insertAdjacentHTML('beforeend', newHtml);
+        },
+
+        deleteListItem: function(selectorID) {
+            var el = document.getElementById(selectorID);
+            el.parentNode.removeChild(el);
         },
 
         clearFields: function() {
@@ -193,7 +222,6 @@ var UIController = (function() {
 
 })();
 
-
 // Global App Controller
 var controller = (function(budgetCtrl, UICtrl) {
 
@@ -214,6 +242,8 @@ var controller = (function(budgetCtrl, UICtrl) {
                 ctrlAddItem();
             }
         });
+
+        document.querySelector(DOM.container).addEventListener('click', ctrlDeleteItem);
     };
 
     var updateBudget = function() {
@@ -248,6 +278,31 @@ var controller = (function(budgetCtrl, UICtrl) {
 
         // 5. Calculate and update budget
         updateBudget();
+    };
+
+    var ctrlDeleteItem = function(event) {
+        var itemID, splitID, type, id;
+
+        // Traverse the DOM to the the outermost div parent of the i button
+        // The id will be something like 'income-1'
+        itemID = event.target.parentNode.parentNode.parentNode.parentNode.id;
+
+        if (itemID) {
+
+            splitID = itemID.split('-');
+            type = splitID[0];
+            id = parseInt(splitID[1]);
+
+            // 1. Delete item from the data structure
+            budgetCtrl.deleteItem(type, id);
+
+            // 2. Delete the item from the user inferface
+            UICtrl.deleteListItem(itemID);
+
+            // 3. Update and show the new budget
+            updateBudget();
+        }
+
     };
 
     return {
